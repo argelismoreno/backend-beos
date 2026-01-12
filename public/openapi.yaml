@@ -1,0 +1,313 @@
+openapi: 3.0.0
+info:
+  title: Product Management API
+  description: API for managing products and prices in multiple currencies.
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:8000/api
+    description: Local Development Server
+paths:
+  /login:
+    post:
+      summary: Inicio de sesión para obtener token
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@example.com
+                password:
+                  type: string
+                  format: password
+                  example: password
+      responses:
+        '200':
+          description: Inicio de sesión exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    type: object
+        '422':
+          description: Validation error
+  /products:
+    get:
+      summary: Listado de todos los productos
+      tags: [Products]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Page number
+      responses:
+        '200':
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  meta:
+                    type: object
+                  links:
+                    type: object
+    post:
+      security:
+        - bearerAuth: []
+      summary: Crear un producto
+      tags: [Products]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreProductRequest'
+      responses:
+        '201':
+          description: Created product
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+  /products/{id}:
+    get:
+      summary: Obtener un producto por ID
+      tags: [Products]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+    put:
+      security:
+        - bearerAuth: []
+      summary: Actualizar un producto
+      tags: [Products]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Eliminar un producto
+      tags: [Products]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Product deleted
+  /products/{id}/prices:
+    get:
+      summary: Listado de precios para un producto
+      tags: [Product Prices]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of prices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductPrice'
+    post:
+      security:
+        - bearerAuth: []
+      summary: Agregar un precio a un producto
+      tags: [Product Prices]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currency_id
+                - price
+              properties:
+                currency_id:
+                  type: integer
+                price:
+                  type: number
+                  format: float
+      responses:
+        '201':
+          description: Price added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProductPrice'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        currency_id:
+          type: integer
+        tax_cost:
+          type: number
+        manufacturing_cost:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        currency:
+          $ref: '#/components/schemas/Currency'
+        prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPrice'
+    ProductPrice:
+      type: object
+      properties:
+        id:
+          type: integer
+        product_id:
+          type: integer
+        currency_id:
+          type: integer
+        price:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        currency:
+          $ref: '#/components/schemas/Currency'
+    Currency:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        symbol:
+          type: string
+        exchange_rate:
+          type: number
+    StoreProductRequest:
+      type: object
+      required:
+        - name
+        - price
+        - currency_id
+        - tax_cost
+        - manufacturing_cost
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        currency_id:
+          type: integer
+        tax_cost:
+          type: number
+        manufacturing_cost:
+          type: number
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        currency_id:
+          type: integer
+        tax_cost:
+          type: number
+        manufacturing_cost:
+          type: number
